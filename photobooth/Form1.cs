@@ -29,6 +29,8 @@ namespace photobooth
         object LvLock = new object();
 
         string strSavePathTextBox = AppDomain.CurrentDomain.BaseDirectory + "\\photobooth";
+        List<PictureBox> pictureBoxes = new List<PictureBox>();
+        int iPicBox = 0;
         #endregion
 
         public Form1()
@@ -38,12 +40,12 @@ namespace photobooth
             {
                 CamList = new List<Camera>();
                 InitializeComponent();
-                this.TopMost = true;
+                //this.TopMost = true;
                 this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
                 this.KeyDown += Form_KeyDown;
                 this.FormClosing += MainForm_FormClosing;
                 this.WindowState = FormWindowState.Maximized;
-                this.BackgroundImage = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\bg.png");
+                //this.BackgroundImage = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\bg.png");
                 APIHandler = new CanonAPI();
                 APIHandler.CameraAdded += APIHandler_CameraAdded;
                 ErrorHandler.SevereErrorHappened += ErrorHandler_SevereErrorHappened;
@@ -60,24 +62,72 @@ namespace photobooth
             {
                 if (IsInit)
                 {
-
-                    this.MouseDown += Form1_MouseDown;
-                    this.tableLayoutPanel1.MouseDown += Form1_MouseDown;
                     this.LiveViewPicBox.MouseDown += Form1_MouseDown;
+                }
+                for (int i = 0; i < 3; i++)
+                {
+                    PictureBox pictureBox = new PictureBox();
+                    pictureBox.BackColor = Color.Black;
+                    pictureBox.Width = 280;
+                    pictureBox.Height = 210;
+                    pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+                    pictureBox.MaximumSize = new System.Drawing.Size(280, 210);
+                    pictureBoxes.Add(pictureBox);
+                    flowLayoutPanel1.Controls.Add(pictureBox);
                 }
             }
             catch (Exception)
             {
+                throw;
+            }
+            watch();
+        }
+        private FileSystemWatcher watcher;
+        private void watch()
+        {
+            watcher = new FileSystemWatcher();
+            watcher.Path = strSavePathTextBox;
+            watcher.NotifyFilter = NotifyFilters.LastWrite;
+            watcher.Filter = "*.JPG";
+            watcher.Changed += new FileSystemEventHandler(OnChanged);
+            watcher.EnableRaisingEvents = true;
+        }
+        private void OnChanged(object sender, FileSystemEventArgs e)
+        {
+            if (iPicBox > pictureBoxes.Count) iPicBox = 0;
+            OnChangedPic(pictureBoxes[iPicBox], e.FullPath);
+            iPicBox++;
+        }
+        private delegate void dgOnChangedPic(PictureBox pictureBox, string path);
+        private void OnChangedPic(PictureBox pictureBox, string path)
+        {
+            if (pictureBox.InvokeRequired)
+            {
+                pictureBox.BeginInvoke(new dgOnChangedPic(OnChangedPic), new object[] { pictureBox, path });
+            }
+            else
+            {
+                try
+                {
+                    pictureBox.Image = Image.FromFile(path);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                MainCamera?.Dispose();
+                RefreshCamera();
             }
         }
+        
 
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
             try
             {
-                MainCamera.TakePhotoShutterAsync();
-                LVBw = LiveViewPicBox.Width;
-                LVBh = LiveViewPicBox.Height;
+                MainCamera.TakePhoto();
+                //MainCamera?.Dispose();
+                //RefreshCamera();
             }
             catch (Exception)
             {
@@ -293,6 +343,13 @@ namespace photobooth
             {
                 //refresh
             }
+        }
+
+        private void Form1_Shown(object sender, EventArgs e)
+        {
+
+            LVBw = LiveViewPicBox.Width;
+            LVBh = LiveViewPicBox.Height;
         }
 
         string strtempcamera = null;
