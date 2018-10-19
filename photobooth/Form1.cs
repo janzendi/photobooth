@@ -73,6 +73,7 @@ namespace photobooth
                     pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
                     pictureBox.MaximumSize = new System.Drawing.Size(280, 210);
                     pictureBoxes.Add(pictureBox);
+                    pictureBox.Click += PictureBox_Click;
                     flowLayoutPanel1.Controls.Add(pictureBox);
                 }
             }
@@ -82,6 +83,16 @@ namespace photobooth
             }
             watch();
         }
+
+        private void PictureBox_Click(object sender, EventArgs e)
+        {
+            if (sender is PictureBox)
+            {
+                Form_PreviewPic form_PreviewPic = new Form_PreviewPic(((PictureBox)sender).Image);
+                form_PreviewPic.ShowDialog();
+            }
+        }
+        
         private FileSystemWatcher watcher;
         private void watch()
         {
@@ -94,9 +105,14 @@ namespace photobooth
         }
         private void OnChanged(object sender, FileSystemEventArgs e)
         {
-            if (iPicBox > pictureBoxes.Count) iPicBox = 0;
+            pictureBoxes[0].Image = pictureBoxes[1].Image;
+            pictureBoxes[1].Image = pictureBoxes[2].Image;
+            OnChangedPic(pictureBoxes[2], e.FullPath);
+            /*
+            if (iPicBox == pictureBoxes.Count) iPicBox = 0;
             OnChangedPic(pictureBoxes[iPicBox], e.FullPath);
             iPicBox++;
+            */
         }
         private delegate void dgOnChangedPic(PictureBox pictureBox, string path);
         private void OnChangedPic(PictureBox pictureBox, string path)
@@ -115,16 +131,41 @@ namespace photobooth
                 {
                     throw;
                 }
-                MainCamera?.Dispose();
-                RefreshCamera();
+
+                new System.Threading.Thread(new System.Threading.ThreadStart(ThreadRefreshCamera));
+
+                Form_PreviewPic form_PreviewPic = new Form_PreviewPic(pictureBox.Image);
+                form_PreviewPic.ShowDialog();
             }
         }
         
+        private void ThreadRefreshCamera()
+        {
+            MainCamera?.Dispose();
+            RefreshCamera();
+        }
 
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
+            if (LiveViewPicBox.Enabled)
+            {
+                LiveViewPicBox.Enabled = false;
+                System.Threading.Thread thread = new System.Threading.Thread(new System.Threading.ThreadStart(ThreadMakePicture));
+                thread.Start();
+            }
+        }
+
+        private void ThreadMakePicture()
+        {
+
             try
             {
+                strCounter = "3";
+                System.Threading.Thread.Sleep(1000);
+                strCounter = "2";
+                System.Threading.Thread.Sleep(1000);
+                strCounter = "1";
+                System.Threading.Thread.Sleep(1000);
                 MainCamera.TakePhoto();
                 //MainCamera?.Dispose();
                 //RefreshCamera();
@@ -132,6 +173,29 @@ namespace photobooth
             catch (Exception)
             {
 
+            }
+            EnableLiveView(true);
+            strCounter = "";
+        }
+
+
+        private delegate void dgEnableLiveView(bool enabled);
+        private void EnableLiveView(bool enabled)
+        {
+            if (LiveViewPicBox.InvokeRequired)
+            {
+                LiveViewPicBox.BeginInvoke(new dgEnableLiveView(EnableLiveView), new object[] { enabled });
+            }
+            else
+            {
+                try
+                {
+                    LiveViewPicBox.Enabled = true;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
             }
         }
 
@@ -279,10 +343,13 @@ namespace photobooth
                             h = LVBh;
                         }
                         e.Graphics.DrawImage(Evf_Bmp, 0, 0, w, h);
+                        e.Graphics.DrawString(strCounter, new Font("Arial", 130), Brushes.White, new System.Drawing.Point(2, 2));
                     }
                 }
             }
         }
+
+        string strCounter = "";
 
         private void FocusNear3Button_Click(object sender, EventArgs e)
         {
