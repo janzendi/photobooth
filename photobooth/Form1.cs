@@ -45,7 +45,8 @@ namespace photobooth
                 this.KeyDown += Form_KeyDown;
                 this.FormClosing += MainForm_FormClosing;
                 this.WindowState = FormWindowState.Maximized;
-                //this.BackgroundImage = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\bg.png");
+                this.BackgroundImage = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\74801-amazing-gold-glitzer-hintergrundbilder-1920x1080.jpg");
+                this.BackgroundImageLayout = ImageLayout.Zoom;
                 APIHandler = new CanonAPI();
                 APIHandler.CameraAdded += APIHandler_CameraAdded;
                 ErrorHandler.SevereErrorHappened += ErrorHandler_SevereErrorHappened;
@@ -55,6 +56,10 @@ namespace photobooth
                 LVBh = LiveViewPicBox.Height;
                 RefreshCamera();
                 IsInit = true;
+                this.picBClose.Image = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\if_cross-24_103181.png");
+                this.picBClose.SizeMode = PictureBoxSizeMode.Zoom;
+                this.picBReload.Image = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\if_sync_126579.png");
+                this.picBReload.SizeMode = PictureBoxSizeMode.Zoom;
             }
             catch (DllNotFoundException) { ReportError("Canon DLLs not found!", true); }
             catch (Exception ex) { ReportError(ex.Message, true); }
@@ -64,14 +69,14 @@ namespace photobooth
                 {
                     this.LiveViewPicBox.MouseDown += Form1_MouseDown;
                 }
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     PictureBox pictureBox = new PictureBox();
                     pictureBox.BackColor = Color.Black;
                     pictureBox.Width = 280;
-                    pictureBox.Height = 210;
+                    pictureBox.Height = 205;
                     pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
-                    pictureBox.MaximumSize = new System.Drawing.Size(280, 210);
+                    //pictureBox.MaximumSize = new System.Drawing.Size(280, 205);
                     pictureBoxes.Add(pictureBox);
                     pictureBox.Click += PictureBox_Click;
                     flowLayoutPanel1.Controls.Add(pictureBox);
@@ -88,7 +93,7 @@ namespace photobooth
         {
             if (sender is PictureBox)
             {
-                Form_PreviewPic form_PreviewPic = new Form_PreviewPic(((PictureBox)sender).Image);
+                Form_PreviewPic form_PreviewPic = new Form_PreviewPic(((PictureBox)sender).Image, ((PictureBox)sender).Tag.ToString());
                 form_PreviewPic.ShowDialog();
             }
         }
@@ -106,13 +111,15 @@ namespace photobooth
         private void OnChanged(object sender, FileSystemEventArgs e)
         {
             pictureBoxes[0].Image = pictureBoxes[1].Image;
+            pictureBoxes[0].Tag = pictureBoxes[1].Tag;
             pictureBoxes[1].Image = pictureBoxes[2].Image;
-            OnChangedPic(pictureBoxes[2], e.FullPath);
-            /*
-            if (iPicBox == pictureBoxes.Count) iPicBox = 0;
-            OnChangedPic(pictureBoxes[iPicBox], e.FullPath);
-            iPicBox++;
-            */
+            pictureBoxes[1].Tag = pictureBoxes[2].Tag;
+            pictureBoxes[2].Image = pictureBoxes[3].Image;
+            pictureBoxes[2].Tag = pictureBoxes[3].Tag;
+            pictureBoxes[3].Image = pictureBoxes[4].Image;
+            pictureBoxes[3].Tag = pictureBoxes[4].Tag;
+            pictureBoxes[4].Tag = e.FullPath;
+            OnChangedPic(pictureBoxes[4], e.FullPath);
         }
         private delegate void dgOnChangedPic(PictureBox pictureBox, string path);
         private void OnChangedPic(PictureBox pictureBox, string path)
@@ -126,6 +133,7 @@ namespace photobooth
                 try
                 {
                     pictureBox.Image = Image.FromFile(path);
+                    pictureBox.Tag = path;
                 }
                 catch (Exception)
                 {
@@ -134,7 +142,7 @@ namespace photobooth
 
                 new System.Threading.Thread(new System.Threading.ThreadStart(ThreadRefreshCamera));
 
-                Form_PreviewPic form_PreviewPic = new Form_PreviewPic(pictureBox.Image);
+                Form_PreviewPic form_PreviewPic = new Form_PreviewPic(pictureBox.Image, path);
                 form_PreviewPic.ShowDialog();
             }
         }
@@ -417,6 +425,23 @@ namespace photobooth
 
             LVBw = LiveViewPicBox.Width;
             LVBh = LiveViewPicBox.Height;
+        }
+
+        private void picBClose_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                IsInit = false;
+                MainCamera?.Dispose();
+                APIHandler?.Dispose();
+                this.Close();
+            }
+            catch (Exception ex) { ReportError(ex.Message, false); }
+        }
+
+        private void picBReload_Click(object sender, EventArgs e)
+        {
+            Application.Restart();
         }
 
         string strtempcamera = null;
