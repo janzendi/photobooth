@@ -58,8 +58,12 @@ namespace photobooth
                 IsInit = true;
                 this.picBClose.Image = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\if_cross-24_103181.png");
                 this.picBClose.SizeMode = PictureBoxSizeMode.Zoom;
+                this.picBClose.Enabled = false;
+                this.picBClose.Visible = false;
                 this.picBReload.Image = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + @"\if_sync_126579.png");
                 this.picBReload.SizeMode = PictureBoxSizeMode.Zoom;
+                this.picBReload.Enabled = false;
+                this.picBReload.Visible = false;
             }
             catch (DllNotFoundException) { ReportError("Canon DLLs not found!", true); }
             catch (Exception ex) { ReportError(ex.Message, true); }
@@ -84,7 +88,7 @@ namespace photobooth
             }
             catch (Exception)
             {
-                throw;
+                
             }
             watch();
         }
@@ -137,10 +141,10 @@ namespace photobooth
                 }
                 catch (Exception)
                 {
-                    throw;
+                    
                 }
 
-                new System.Threading.Thread(new System.Threading.ThreadStart(ThreadRefreshCamera));
+                new System.Threading.Thread(new System.Threading.ThreadStart(ThreadRefreshCamera)).Start();
 
                 Form_PreviewPic form_PreviewPic = new Form_PreviewPic(pictureBox.Image, path);
                 form_PreviewPic.ShowDialog();
@@ -174,7 +178,8 @@ namespace photobooth
                 System.Threading.Thread.Sleep(1000);
                 strCounter = "1";
                 System.Threading.Thread.Sleep(1000);
-                MainCamera.TakePhoto();
+                MainCamera.StopLiveView();
+                MainCamera.TakePhotoAsync();
                 //MainCamera?.Dispose();
                 //RefreshCamera();
             }
@@ -202,7 +207,7 @@ namespace photobooth
                 }
                 catch (Exception)
                 {
-                    throw;
+                    
                 }
             }
         }
@@ -223,7 +228,10 @@ namespace photobooth
                 MainCamera?.Dispose();
                 APIHandler?.Dispose();
             }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex)
+            {
+            //    ReportError(ex.Message, false); 
+            }
         }
 
 
@@ -238,14 +246,14 @@ namespace photobooth
         private void MainCamera_StateChanged(Camera sender, StateEventID eventID, int parameter)
         {
             try { if (eventID == StateEventID.Shutdown && IsInit) { Invoke((Action)delegate { CloseSession(); }); } }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         int temp = 0;
         private void MainCamera_ProgressChanged(object sender, int progress)
         {
             try { Invoke((Action)delegate { temp = progress; }); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         private void MainCamera_LiveViewUpdated(Camera sender, Stream img)
@@ -259,7 +267,7 @@ namespace photobooth
                 }
                 LiveViewPicBox.Invalidate();
             }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         private void MainCamera_DownloadReady(Camera sender, DownloadInfo Info)
@@ -270,12 +278,16 @@ namespace photobooth
                 Invoke((Action)delegate { dir = strSavePathTextBox; });
                 sender.DownloadFile(Info, dir);
             }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         private void ErrorHandler_NonSevereErrorHappened(object sender, ErrorCode ex)
         {
             ReportError($"SDK Error code: {ex} ({((int)ex).ToString("X")})", false);
+            //MainCamera.CloseSession();
+            //MainCamera.Dispose();
+            //RefreshCamera();
+            //Application.Restart();
         }
 
         private void ErrorHandler_SevereErrorHappened(object sender, Exception ex)
@@ -296,7 +308,7 @@ namespace photobooth
         private void RefreshButton_Click(object sender, EventArgs e)
         {
             try { RefreshCamera(); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         #endregion
@@ -309,7 +321,7 @@ namespace photobooth
             {
                 MainCamera.TakePhotoShutterAsync();
             }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
     
         #endregion
@@ -324,7 +336,7 @@ namespace photobooth
                 LVBh = LiveViewPicBox.Height;
                 LiveViewPicBox.Invalidate();
             }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);   }
         }
 
         private void LiveViewPicBox_Paint(object sender, PaintEventArgs e)
@@ -362,37 +374,37 @@ namespace photobooth
         private void FocusNear3Button_Click(object sender, EventArgs e)
         {
             try { MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)DriveLens.Near3); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);   }
         }
 
         private void FocusNear2Button_Click(object sender, EventArgs e)
         {
             try { MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)DriveLens.Near2); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);   }
         }
 
         private void FocusNear1Button_Click(object sender, EventArgs e)
         {
             try { MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)DriveLens.Near1); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         private void FocusFar1Button_Click(object sender, EventArgs e)
         {
             try { MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)DriveLens.Far1); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         private void FocusFar2Button_Click(object sender, EventArgs e)
         {
             try { MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)DriveLens.Far2); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         private void FocusFar3Button_Click(object sender, EventArgs e)
         {
             try { MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)DriveLens.Far3); }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         #endregion
@@ -436,7 +448,7 @@ namespace photobooth
                 APIHandler?.Dispose();
                 this.Close();
             }
-            catch (Exception ex) { ReportError(ex.Message, false); }
+            catch (Exception ex) { ReportError(ex.Message, false);  }
         }
 
         private void picBReload_Click(object sender, EventArgs e)
@@ -468,6 +480,12 @@ namespace photobooth
 
         private void ReportError(string message, bool lockdown)
         {
+
+            if (message == "COMM_DISCONNECTED")
+            {
+                Application.Restart();
+                return;
+            }
             int errc;
             lock (ErrLock) { errc = ++ErrCount; }
 
